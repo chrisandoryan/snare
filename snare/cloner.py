@@ -140,6 +140,11 @@ class Cloner(object):
                 file_name = "/index.html"
             else:
                 file_name = host
+        
+        # Extract base URL from URL with query delimiter (i.e., https://something.com/_next/image?url=https://somethingelse.com/logo.png&w=1024&h=768)
+        query_delim_start = file_name.find("&")
+        if query_delim_start != -1:
+            file_name = file_name[:query_delim_start]
 
         m = hashlib.md5()
         m.update(file_name.encode("utf-8"))
