@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 from requests_html import AsyncHTMLSession
 import nest_asyncio
 import os
@@ -104,7 +105,7 @@ class Cloner(object):
     async def replace_links(self, data, level):
         soup = BeautifulSoup(data, "html.parser")
         # print(data)
-        print(soup.findAll(src=True))
+        # print(soup.findAll(src=True))
 
         # find all relative links
         for link in soup.findAll(href=True):
@@ -151,6 +152,7 @@ class Cloner(object):
         if query_delim_start != -1:
             file_name = file_name[:query_delim_start]
 
+        file_name = unquote(file_name)
         m = hashlib.md5()
         m.update(file_name.encode("utf-8"))
         hash_name = m.hexdigest()
@@ -161,7 +163,6 @@ class Cloner(object):
             print(animation[self.itr % len(animation)], end="\r")
             self.itr = self.itr + 1
             current_url, level = await self.new_urls.get()
-            print("Current URL: ", current_url, level)
             if current_url.human_repr() in self.visited_urls:
                 continue
             self.visited_urls.append(current_url.human_repr())
@@ -170,8 +171,11 @@ class Cloner(object):
             data = None
             content_type = None
             try:
-                response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=20.0)
-                await response.html.arender(sleep=3)
+                try:
+                    response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=20.0)
+                    await response.html.arender(sleep=3)
+                except Exception as e:
+                    print(e)
                 
                 headers = self.get_headers(response)
                 content_type = response.headers['Content-Type'] if 'Content-Type' in response.headers else ''
@@ -190,6 +194,10 @@ class Cloner(object):
                 self.meta[file_name]["hash"] = hash_name
                 self.meta[file_name]["headers"] = headers
                 self.counter = self.counter + 1
+                
+                print("Current URL: ", current_url, level, hash_name)
+                print("Data length: ", len(data))
+                print("===")
 
                 if "text/html" in content_type:
                     soup = await self.replace_links(data, level)
