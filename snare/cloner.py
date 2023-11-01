@@ -104,7 +104,7 @@ class Cloner(object):
     async def replace_links(self, data, level):
         soup = BeautifulSoup(data, "html.parser")
         # print(data)
-        # print(soup.findAll(src=True))
+        print(soup.findAll(src=True))
 
         # find all relative links
         for link in soup.findAll(href=True):
@@ -171,11 +171,17 @@ class Cloner(object):
             content_type = None
             try:
                 response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=20.0)
-                await response.html.arender(sleep=5)
+                await response.html.arender(sleep=3)
                 
                 headers = self.get_headers(response)
-                content_type = response.headers['Content-Type']
-                data = response.html.html
+                content_type = response.headers['Content-Type'] if 'Content-Type' in response.headers else ''
+
+                # Load data from saved HTML for initial page (to handle lazy-loading website)
+                if self.root == current_url:
+                    with open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/speedtesting-live.html', 'r') as f:
+                        data = f.read()
+                else:
+                    data = response.html.html
 
             except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
                 self.logger.error(client_error)
@@ -214,7 +220,6 @@ class Cloner(object):
             exit(-1)
 
     async def run(self):
-        # session = aiohttp.ClientSession()
         session = AsyncHTMLSession()
         try:
             await self.new_urls.put((self.root, 0))
