@@ -1,3 +1,5 @@
+from requests_html import AsyncHTMLSession
+import nest_asyncio
 import os
 import sys
 import logging
@@ -13,7 +15,7 @@ from asyncio import Queue
 from collections import defaultdict
 
 animation = "|/-\\"
-
+nest_asyncio.apply()
 
 class Cloner(object):
     def __init__(self, root, max_depth, css_validate, default_path="/opt/snare"):
@@ -69,7 +71,8 @@ class Cloner(object):
     async def process_link(self, url, level, check_host=False):
         try:
             url = yarl.URL(url)
-        except UnicodeError:
+        except UnicodeError as e:
+            print("Got Error: ", e)
             return None
         if url.scheme in ["data", "javascript", "file"]:
             return url.human_repr()
@@ -100,6 +103,8 @@ class Cloner(object):
 
     async def replace_links(self, data, level):
         soup = BeautifulSoup(data, "html.parser")
+        # print(data)
+        # print(soup.findAll(src=True))
 
         # find all relative links
         for link in soup.findAll(href=True):
@@ -156,6 +161,7 @@ class Cloner(object):
             print(animation[self.itr % len(animation)], end="\r")
             self.itr = self.itr + 1
             current_url, level = await self.new_urls.get()
+            print("Current URL: ", current_url, level)
             if current_url.human_repr() in self.visited_urls:
                 continue
             self.visited_urls.append(current_url.human_repr())
@@ -164,24 +170,25 @@ class Cloner(object):
             data = None
             content_type = None
             try:
-                response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=10.0)
+                response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=20.0)
+                await response.html.arender(sleep=5)
+                
                 headers = self.get_headers(response)
-                content_type = response.content_type
-                data = await response.read()
+                content_type = response.headers['Content-Type']
+                data = response.html.html
+
             except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
                 self.logger.error(client_error)
-            else:
-                await response.release()
 
             if data is not None:
                 self.meta[file_name]["hash"] = hash_name
                 self.meta[file_name]["headers"] = headers
                 self.counter = self.counter + 1
 
-                if content_type == "text/html":
+                if "text/html" in content_type:
                     soup = await self.replace_links(data, level)
                     data = str(soup).encode()
-                elif content_type == "text/css":
+                elif "text/css" in content_type:
                     css = cssutils.parseString(data, validate=self.css_validate)
                     for carved_url in cssutils.getUrls(css):
                         if carved_url.startswith("data"):
@@ -193,7 +200,7 @@ class Cloner(object):
                             await self.new_urls.put((carved_url, level + 1))
 
                 with open(os.path.join(self.target_path, hash_name), "wb") as index_fh:
-                    index_fh.write(data)
+                    index_fh.write(str(data).encode('utf-8'))
 
     async def get_root_host(self):
         try:
@@ -207,7 +214,8 @@ class Cloner(object):
             exit(-1)
 
     async def run(self):
-        session = aiohttp.ClientSession()
+        # session = aiohttp.ClientSession()
+        session = AsyncHTMLSession()
         try:
             await self.new_urls.put((self.root, 0))
             await self.new_urls.put((self.error_page, 0))
