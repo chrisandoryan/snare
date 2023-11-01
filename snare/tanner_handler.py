@@ -1,14 +1,19 @@
+import hashlib
 import re
 import os
 import multidict
 import json
 import logging
 import aiohttp
+import requests
 
 from urllib.parse import unquote
 from bs4 import BeautifulSoup
 from snare.html_handler import HtmlHandler
+from snare.cloner import Cloner
 
+import asyncio
+loop = asyncio.get_event_loop()
 
 class TannerHandler:
     def __init__(self, run_args, meta, snare_uuid):
@@ -130,6 +135,44 @@ class TannerHandler:
 
             if not file_name:
                 status_code = 404
+                real_host = "https://speedtesting.live"
+
+                # NOTE: If not found, fetch the data fro the real host and insert it into meta.json
+                print("Not Found!")
+                try:
+                    meta_file = open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/meta.json', 'r')
+                    orig_meta = json.load(meta_file)
+                    meta_file.close()
+
+                    response = requests.get(f"{real_host}{requested_name}")
+
+                    query_delim_start = requested_name.find("&")
+                    if query_delim_start != -1:
+                        requested_name = requested_name[:query_delim_start]
+
+                    requested_name = unquote(requested_name)
+                    m = hashlib.md5()
+                    m.update(requested_name.encode("utf-8"))
+                    hash_name = m.hexdigest()
+
+                    material_file = open(f'/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/{hash_name}', 'w')
+                    print(f"Writing new data of {requested_name} to {hash_name}")
+                    
+                    headers = Cloner.get_headers(response)
+                    orig_meta[requested_name] = {
+                        "hash": hash_name,
+                        "headers": headers
+                    }
+                    material_file.write(response.text)
+                    material_file.close()
+
+                    meta_file = open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/meta.json', 'w')
+                    json.dump(orig_meta, meta_file)
+                    meta_file.close()
+
+                except Exception as e:
+                    print(e)
+
             else:
                 path = os.path.join(self.dir, file_name)
                 if os.path.isfile(path):

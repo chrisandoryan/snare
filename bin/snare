@@ -213,6 +213,7 @@ if __name__ == '__main__':
         loop.run_forever()
     except (KeyboardInterrupt, TypeError) as e:
         loop.run_until_complete(app.stop())
+        print(e)
         print_color(e, 'ERROR')
     finally:
         if compare_version_fut:

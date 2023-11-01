@@ -38,6 +38,8 @@ class Cloner(object):
         self.counter = 0
         self.itr = 0
 
+        print(f"Initiating Cloner with root page: {root}")
+
     @staticmethod
     def add_scheme(url):
         new_url = yarl.URL(url)
