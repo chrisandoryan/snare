@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 import os
 import sys
 import logging
@@ -146,6 +147,7 @@ class Cloner(object):
         if query_delim_start != -1:
             file_name = file_name[:query_delim_start]
 
+        file_name = unquote(file_name)
         m = hashlib.md5()
         m.update(file_name.encode("utf-8"))
         hash_name = m.hexdigest()
@@ -167,7 +169,13 @@ class Cloner(object):
                 response = await session.get(current_url, headers={"Accept": "text/html"}, timeout=10.0)
                 headers = self.get_headers(response)
                 content_type = response.content_type
-                data = await response.read()
+
+                if self.root == current_url:
+                    with open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/speedtesting-live.html', 'r') as f:
+                        data = f.read()
+                else:
+                    data = await response.read()
+
             except (aiohttp.ClientError, asyncio.TimeoutError) as client_error:
                 self.logger.error(client_error)
             else:

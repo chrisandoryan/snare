@@ -87,9 +87,9 @@ class TannerHandler:
         status_code = 200
         headers = multidict.CIMultiDict()
         # Creating a regex object for the pattern of multiple contiguous forward slashes
-        p = re.compile("/+")
+        # p = re.compile("/+")
         # Substituting all occurrences of the pattern with single forward slash
-        requested_name = p.sub("/", requested_name)
+        # requested_name = p.sub("/", requested_name)
 
         if detection["type"] == 1:
             possible_requests = [requested_name]
@@ -99,13 +99,23 @@ class TannerHandler:
 
             file_name = None
             for requested_name in possible_requests:
+                print("Requested Name (I): ", requested_name)
                 if requested_name == "/":
                     requested_name = self.run_args.index_page
                 if requested_name[-1] == "/":
                     requested_name = requested_name[:-1]
+                    
+                print("Requested Name (B): ", requested_name)
+                # Extract base URL from URL with query delimiter (i.e., https://something.com/_next/image?url=https://somethingelse.com/logo.png&w=1024&h=768)
+                query_delim_start = requested_name.find("&")
+                if query_delim_start != -1:
+                    requested_name = requested_name[:query_delim_start]
                 requested_name = unquote(requested_name)
+                print("Requested Name (A): ", requested_name)
+
                 try:
                     file_name = self.meta[requested_name]["hash"]
+                    print("File Name: ", file_name)
                     for header in self.meta[requested_name].get("headers", []):
                         for key, value in header.items():
                             headers.add(key, value)

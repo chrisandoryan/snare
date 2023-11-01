@@ -1,0 +1,4 @@
+#!/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/snare/venv/bin/python3
+# EASY-INSTALL-SCRIPT: 'Snare==0.3.0','snare'
+__requires__ = 'Snare==0.3.0'
+__import__('pkg_resources').run_script('Snare==0.3.0', 'snare')
