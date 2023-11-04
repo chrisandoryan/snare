@@ -126,6 +126,7 @@ class TannerHandler:
         content = None
         status_code = 200
         headers = multidict.CIMultiDict()
+        
         # Creating a regex object for the pattern of multiple contiguous forward slashes
         # p = re.compile("/+")
         # Substituting all occurrences of the pattern with single forward slash
