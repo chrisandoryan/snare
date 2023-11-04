@@ -24,6 +24,41 @@ class TannerHandler:
         self.html_handler = HtmlHandler(run_args.no_dorks, run_args.tanner)
         self.logger = logging.getLogger(__name__)
 
+    def save_new_response_to_cloner_meta(self, meta_file_directory, real_host, requested_name):
+        try:
+            meta_file = open(f'{meta_file_directory}/meta.json', 'r')
+            orig_meta = json.load(meta_file)
+            meta_file.close()
+
+            response = requests.get(f"{real_host}{requested_name}")
+
+            query_delim_start = requested_name.find("&")
+            if query_delim_start != -1:
+                requested_name = requested_name[:query_delim_start]
+
+            requested_name = unquote(requested_name)
+            m = hashlib.md5()
+            m.update(requested_name.encode("utf-8"))
+            hash_name = m.hexdigest()
+
+            material_file = open(f'{meta_file_directory}/{hash_name}', 'w')
+            print(f"[Tanner -> Cloner] Writing New Data of {requested_name} to {hash_name}.")
+            
+            headers = Cloner.get_headers(response)
+            orig_meta[requested_name] = {
+                "hash": hash_name,
+                "headers": headers
+            }
+            material_file.write(response.text)
+            material_file.close()
+
+            meta_file = open(f'{meta_file_directory}/meta.json', 'w')
+            json.dump(orig_meta, meta_file)
+            meta_file.close()
+
+        except Exception as e:
+            print(e)
+
     def create_data(self, request, response_status):
         data = dict(
             method=None,
@@ -136,42 +171,9 @@ class TannerHandler:
             if not file_name:
                 status_code = 404
                 real_host = "https://speedtesting.live"
+                meta_file_directory = "/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live"
 
-                # NOTE: If not found, fetch the data fro the real host and insert it into meta.json
-                print("Not Found!")
-                try:
-                    meta_file = open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/meta.json', 'r')
-                    orig_meta = json.load(meta_file)
-                    meta_file.close()
-
-                    response = requests.get(f"{real_host}{requested_name}")
-
-                    query_delim_start = requested_name.find("&")
-                    if query_delim_start != -1:
-                        requested_name = requested_name[:query_delim_start]
-
-                    requested_name = unquote(requested_name)
-                    m = hashlib.md5()
-                    m.update(requested_name.encode("utf-8"))
-                    hash_name = m.hexdigest()
-
-                    material_file = open(f'/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/{hash_name}', 'w')
-                    print(f"Writing new data of {requested_name} to {hash_name}")
-                    
-                    headers = Cloner.get_headers(response)
-                    orig_meta[requested_name] = {
-                        "hash": hash_name,
-                        "headers": headers
-                    }
-                    material_file.write(response.text)
-                    material_file.close()
-
-                    meta_file = open('/Users/chrisandoryan/Documents/Projects/Dev/Synergitech/Honeypotting/snare/data/snare/pages/speedtesting.live/meta.json', 'w')
-                    json.dump(orig_meta, meta_file)
-                    meta_file.close()
-
-                except Exception as e:
-                    print(e)
+                # self.save_new_response_to_cloner_meta(meta_file_directory, real_host, requested_name)
 
             else:
                 path = os.path.join(self.dir, file_name)
